@@ -1833,6 +1833,26 @@ void cm_print_error(const char * const format, ...)
     va_end(args);
 }
 
+void cm_print_test_error(struct CMUnitTestState *cmtest,
+                         const char * const format, ...) \
+                         CMOCKA_PRINTF_ATTRIBUTE(2, 3);
+
+void cm_print_test_error(struct CMUnitTestState *cmtest,
+                         const char * const format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    if (cm_error_message_enabled) {
+        vcm_print_error(format, args);
+
+        cmtest->error_message = cm_error_message;
+        cm_error_message = NULL;
+    } else {
+        vprint_error(format, args);
+    }
+    va_end(args);
+}
+
 /* Standard output and error print methods. */
 void vprint_message(const char* const format, va_list args) {
     char buffer[1024];
@@ -2538,18 +2558,24 @@ int _cmocka_run_group_tests(const char *group_name,
                         total_failed++;
                         break;
                     default:
+                        cm_print_test_error(cmtest,
+                                            "Internal cmocka error");
+
                         cmprintf(PRINTF_TEST_ERROR,
                                  test_number,
                                  cmtest->test->name,
-                                 "Internal cmocka error");
+                                 cmtest->error_message);
                         total_errors++;
                         break;
                 }
             } else {
+                cm_print_test_error(cmtest,
+                                    "Could not run the test - check test fixtures");
+
                 cmprintf(PRINTF_TEST_ERROR,
                          test_number,
                          cmtest->test->name,
-                         "Could not run the test - check test fixtures");
+                         cmtest->error_message);
                 total_errors++;
             }
         }
